@@ -120,7 +120,13 @@ bool connectToServer() {
     pClient->setClientCallbacks(new MyClientCallback());
 
     // Connect to the remove BLE Server.
-    pClient->connect(bluettiDevice);  // if you pass BLEAdvertisedDevice instead of address, it will be recognized type of peer device address (public or private)
+    if (!pClient->connect(bluettiDevice))// if you pass BLEAdvertisedDevice instead of address, it will be recognized type of peer device address (public or private)
+    {
+      /** Created a client but failed to connect, don't need to keep it as it has no data */
+      BLEDevice::deleteClient(pClient);
+      Serial.println("Failed to connect, deleted client");
+      return false;
+    }
     Serial.println(F("[BT] - Connected to server"));
     // pClient->setMTU(517); //set client to request maximum MTU from server (default is 23 otherwise)
   
@@ -207,10 +213,13 @@ void handleBluetooth(){
   if (doConnect == true) {
     if (connectToServer()) {
       Serial.println(F("We are now connected to the Bluetti BLE Server."));
+      doConnect = false;
     } else {
-      Serial.println(F("We have failed to connect to the server; there is nothing more we will do."));
+      Serial.println(F("We have failed to connect to the server; try again next loop (after 2 secs)"));
+        doScan = true;
+        delay(2 * 1000);
     }
-    doConnect = false;
+    
   }
 
   if ((millis() - lastBTMessage) > (MAX_DISCONNECTED_TIME_UNTIL_REBOOT * 60000)){ 
